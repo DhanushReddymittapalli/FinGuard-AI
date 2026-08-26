@@ -61,7 +61,7 @@ if all(column in df.columns for column in required_columns):
 st.write("### 🔍 Confusion Matrix")
 st.dataframe(cm)
 
-    # User prediction
+     User prediction
 st.write("### 🔍 Check a Transaction")
     
 
