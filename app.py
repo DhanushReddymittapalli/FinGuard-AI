@@ -8,8 +8,10 @@ st.set_page_config(
     layout="wide"
 )
 
-# Load model and threshold
+# Load model
 model = joblib.load("finguard_model.pkl")
+
+# Load optimized threshold
 threshold = joblib.load("finguard_threshold.pkl")
 
 # Load demo transactions
@@ -19,8 +21,8 @@ st.title("🛡️ FinGuard AI")
 st.subheader("AI-Powered Credit Card Fraud Detection")
 
 st.write(
-    "FinGuard AI uses a trained Random Forest model "
-    "to estimate the probability that a transaction is fraudulent."
+    "FinGuard AI uses a trained Random Forest machine-learning "
+    "model to estimate the probability that a transaction is fraudulent."
 )
 
 st.info(
@@ -28,31 +30,39 @@ st.info(
 )
 
 # --------------------------------------------------
-# DEMO TRANSACTION
+# TRANSACTION SELECTION
 # --------------------------------------------------
 
 st.write("### 🧪 Test a Real Dataset Transaction")
 
-demo_index = st.number_input(
-    "Select Demo Transaction",
+demo_position = st.number_input(
+    "Select Transaction Row",
     min_value=0,
     max_value=len(demo_df) - 1,
     value=0,
     step=1
 )
 
-demo_transaction = demo_df.drop(
-    columns=["Class"]
-).iloc[[demo_index]]
+# Get transaction by POSITION, not original index
+selected_transaction = demo_df.iloc[[int(demo_position)]].copy()
 
-st.write("Selected transaction:")
+# Actual label
+actual_label = int(selected_transaction["Class"].iloc[0])
+
+# Remove target column before prediction
+transaction = selected_transaction.drop(
+    columns=["Class"]
+)
+
+st.write("### 📋 Selected Transaction")
+
 st.dataframe(
-    demo_transaction,
+    transaction,
     use_container_width=True
 )
 
 # --------------------------------------------------
-# ANALYZE TRANSACTION
+# ANALYZE
 # --------------------------------------------------
 
 if st.button(
@@ -60,89 +70,106 @@ if st.button(
     use_container_width=True
 ):
 
-    transaction = demo_transaction.copy()
-
     probability = model.predict_proba(
         transaction
     )[0][1]
 
+    # Risk classification
     if probability >= threshold:
+
         risk_level = "HIGH RISK 🚨"
+
     elif probability >= 0.10:
+
         risk_level = "MEDIUM RISK ⚠️"
+
     else:
+
         risk_level = "LOW RISK ✅"
 
+    # Results
     st.write("### 📊 Fraud Analysis")
 
     col1, col2 = st.columns(2)
 
     with col1:
+
         st.metric(
             "Fraud Probability",
             f"{probability:.2%}"
         )
 
     with col2:
+
         st.metric(
             "Risk Level",
             risk_level
         )
 
+    # Risk message
     if probability >= threshold:
+
         st.error(
             "🚨 HIGH FRAUD RISK\n\n"
-            "This transaction has a high estimated "
-            "probability of fraudulent activity."
+            "The model estimates a high probability "
+            "of fraudulent activity."
         )
 
     elif probability >= 0.10:
+
         st.warning(
             "⚠️ MEDIUM FRAUD RISK\n\n"
-            "This transaction requires additional review."
+            "The transaction should receive additional review."
         )
 
     else:
+
         st.success(
             "✅ LOW FRAUD RISK\n\n"
-            "This transaction has a low estimated probability of fraud."
+            "The model estimates a low probability of fraud."
         )
 
-    # Actual class, only for demonstration
-    if "Class" in demo_df.columns:
+    # Actual dataset result
+    st.write("### 🎯 Actual Dataset Label")
 
-        actual_class = demo_df.iloc[demo_index]["Class"]
+    if actual_label == 1:
 
-        if actual_class == 1:
-            st.write("### 🎯 Actual Dataset Label")
-            st.error("Actual label: FRAUD")
+        st.error(
+            "🚨 FRAUD — Actual dataset label is FRAUD."
+        )
 
-        else:
-            st.write("### 🎯 Actual Dataset Label")
-            st.success("Actual label: LEGITIMATE")
+    else:
+
+        st.success(
+            "✅ LEGITIMATE — Actual dataset label is LEGITIMATE."
+        )
 
 # --------------------------------------------------
 # MODEL INFORMATION
 # --------------------------------------------------
 
 st.write("---")
+
 st.write("### 🤖 Model Information")
 
 col1, col2, col3 = st.columns(3)
 
 with col1:
+
     st.metric(
         "Model",
         "Random Forest"
     )
 
 with col2:
+
     st.metric(
         "Decision Threshold",
         f"{threshold:.2f}"
     )
 
 with col3:
+
     st.metric(
         "Features",
         "30"
