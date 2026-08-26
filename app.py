@@ -61,17 +61,22 @@ if all(column in df.columns for column in required_columns):
         f"{accuracy * 100:.1f}%"
     )
 
-    # Confusion Matrix
-    cm = confusion_matrix(y_test, predictions)
+# Confusion Matrix
+cm = confusion_matrix(
+    y_test,
+    predictions,
+    labels=[0, 1]
+)
 
-    st.write("### 🔍 Confusion Matrix")
-    st.dataframe(
-        pd.DataFrame(
-            cm,
-            index=["Actual Safe", "Actual Fraud"],
-            columns=["Predicted Safe", "Predicted Fraud"]
-        )
+st.write("### 🔍 Confusion Matrix")
+
+st.dataframe(
+    pd.DataFrame(
+        cm,
+        index=["Actual Safe", "Actual Fraud"],
+        columns=["Predicted Safe", "Predicted Fraud"]
     )
+)
 
     # User prediction
     st.write("### 🔎 Check a Transaction")
