@@ -78,6 +78,25 @@ feature_names = [
 # --------------------------------------------------
 
 st.write("### 🔍 Transaction Analysis")
+st.write("### 🧪 Test a Real Dataset Transaction")
+
+demo_index = st.number_input(
+    "Select Demo Transaction",
+    min_value=0,
+    max_value=len(demo_df) - 1,
+    value=0,
+    step=1
+)
+
+demo_transaction = demo_df.drop(
+    columns=["Class"]
+).iloc[[demo_index]]
+
+st.write("Selected transaction:")
+st.dataframe(
+    demo_transaction,
+    use_container_width=True
+)
 
 values = {}
 
