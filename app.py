@@ -93,3 +93,10 @@ else:
         "Dataset must contain these columns: "
         "amount, frequency, risk"
     )
+st.write("### 📊 Fraud Risk Distribution")
+
+risk_counts = df["risk"].value_counts().rename(
+    index={0: "Safe", 1: "Fraud Risk"}
+)
+
+st.bar_chart(risk_counts)
