@@ -56,6 +56,10 @@ if all(column in df.columns for column in required_columns):
         "Model Accuracy",
         f"{accuracy * 100:.1f}%"
     )
+    cm = confusion_matrix(y_test, predictions)
+
+st.write("### 🔍 Confusion Matrix")
+st.dataframe(cm)
 
     # User prediction
     st.write("### 🔍 Check a Transaction")
