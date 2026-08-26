@@ -1,4 +1,7 @@
 # 💰 FinGuard AI
+## 🚀 Live Demo
+
+[Open FinGuard AI](https://uwg.streamlit.app/)
 
 ## 🤖 AI-Based Personal Finance & Fraud Risk Analyzer
 
