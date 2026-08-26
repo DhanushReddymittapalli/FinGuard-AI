@@ -4,11 +4,13 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, confusion_matrix
 
+# Page configuration
 st.set_page_config(
     page_title="FinGuard AI",
     page_icon="💰"
 )
 
+# Title
 st.title("💰 FinGuard AI")
 st.subheader("AI-Based Personal Finance & Fraud Risk Analyzer")
 
@@ -20,6 +22,7 @@ st.write(
 # Load transaction dataset
 df = pd.read_csv("transactions.csv")
 
+# Display transaction data
 st.write("### 📊 Transaction Data")
 st.dataframe(df, use_container_width=True)
 
@@ -46,6 +49,7 @@ if all(column in df.columns for column in required_columns):
         random_state=42
     )
 
+    # Train model
     model.fit(X_train, y_train)
 
     # Model evaluation
@@ -53,17 +57,24 @@ if all(column in df.columns for column in required_columns):
     accuracy = accuracy_score(y_test, predictions)
 
     st.metric(
-    "Model Accuracy",
+        "Model Accuracy",
         f"{accuracy * 100:.1f}%"
     )
+
+    # Confusion Matrix
     cm = confusion_matrix(y_test, predictions)
 
-st.write("### 🔍 Confusion Matrix")
-st.dataframe(cm)
+    st.write("### 🔍 Confusion Matrix")
+    st.dataframe(
+        pd.DataFrame(
+            cm,
+            index=["Actual Safe", "Actual Fraud"],
+            columns=["Predicted Safe", "Predicted Fraud"]
+        )
+    )
 
-     User prediction
-st.write("### 🔍 Check a Transaction")
-    
+    # User prediction
+    st.write("### 🔎 Check a Transaction")
 
     amount = st.number_input(
         "Transaction Amount",
@@ -93,15 +104,21 @@ st.write("### 🔍 Check a Transaction")
         else:
             st.success("✅ Transaction Appears Safe")
 
+    # Fraud Risk Distribution
+    st.write("### 📊 Fraud Risk Distribution")
+
+    risk_counts = df["risk"].value_counts().rename(
+        index={
+            0: "Safe",
+            1: "Fraud Risk"
+        }
+    )
+
+    st.bar_chart(risk_counts)
+
 else:
+
     st.error(
         "Dataset must contain these columns: "
         "amount, frequency, risk"
     )
-st.write("### 📊 Fraud Risk Distribution")
-
-risk_counts = df["risk"].value_counts().rename(
-    index={0: "Safe", 1: "Fraud Risk"}
-)
-
-st.bar_chart(risk_counts)
