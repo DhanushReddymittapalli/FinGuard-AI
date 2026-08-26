@@ -54,3 +54,6 @@ FinGuard-AI/
 └── README.md
 pip install -r requirements.txt
 streamlit run app.py
+## 📸 Application Screenshot
+
+![FinGuard AI Application](Screenshot_20260826_143423.jpg)
