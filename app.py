@@ -15,7 +15,7 @@ model = joblib.load("finguard_model.pkl")
 threshold = joblib.load("finguard_threshold.pkl")
 
 # Load demo transactions
-demo_df = pd.read_csv("demo_transactions.csv")
+demo_df = pd.read_csv("demo_transactions_small.csv")
 
 st.title("🛡️ FinGuard AI")
 st.subheader("AI-Powered Credit Card Fraud Detection")
