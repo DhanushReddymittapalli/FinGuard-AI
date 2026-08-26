@@ -62,7 +62,8 @@ st.write("### 🔍 Confusion Matrix")
 st.dataframe(cm)
 
     # User prediction
-    st.write("### 🔍 Check a Transaction")
+st.write("### 🔍 Check a Transaction")
+    
 
     amount = st.number_input(
         "Transaction Amount",
