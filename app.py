@@ -1,128 +1,249 @@
 import streamlit as st
 import pandas as pd
-import streamlit as st
-import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, confusion_matrix
+import joblib
 
-# Page configuration
+# --------------------------------------------------
+# PAGE CONFIGURATION
+# --------------------------------------------------
+
 st.set_page_config(
     page_title="FinGuard AI",
-    page_icon="💰"
+    page_icon="🛡️",
+    layout="wide"
 )
 
-# Title
-st.title("💰 FinGuard AI")
-st.subheader("AI-Based Personal Finance & Fraud Risk Analyzer")
+# --------------------------------------------------
+# LOAD TRAINED MODEL
+# --------------------------------------------------
+
+model = joblib.load("finguard_model.pkl")
+threshold = joblib.load("finguard_threshold.pkl")
+
+# --------------------------------------------------
+# HEADER
+# --------------------------------------------------
+
+st.title("🛡️ FinGuard AI")
+st.subheader("AI-Powered Credit Card Fraud Detection")
 
 st.write(
-    "Analyze financial transactions and identify potential fraud risk "
-    "using machine learning."
+    "FinGuard AI uses a trained Random Forest machine-learning model "
+    "to estimate the probability that a credit-card transaction is fraudulent."
 )
 
-# Load dataset
-df = pd.read_csv("transactions.csv")
+st.info(
+    "Model trained on the ULB Credit Card Fraud Detection benchmark dataset."
+)
 
-# Check required columns
-required_columns = ["amount", "frequency", "risk"]
+# --------------------------------------------------
+# DATASET FEATURES
+# --------------------------------------------------
 
-if not all(column in df.columns for column in required_columns):
-    st.error(
-        "Dataset must contain these columns: "
-        "amount, frequency, risk"
+feature_names = [
+    "Time",
+    "V1",
+    "V2",
+    "V3",
+    "V4",
+    "V5",
+    "V6",
+    "V7",
+    "V8",
+    "V9",
+    "V10",
+    "V11",
+    "V12",
+    "V13",
+    "V14",
+    "V15",
+    "V16",
+    "V17",
+    "V18",
+    "V19",
+    "V20",
+    "V21",
+    "V22",
+    "V23",
+    "V24",
+    "V25",
+    "V26",
+    "V27",
+    "V28",
+    "Amount"
+]
+
+# --------------------------------------------------
+# TRANSACTION INPUT
+# --------------------------------------------------
+
+st.write("### 🔍 Transaction Analysis")
+
+values = {}
+
+col1, col2 = st.columns(2)
+
+with col1:
+
+    values["Time"] = st.number_input(
+        "Transaction Time",
+        value=0.0
     )
-    st.stop()
 
-# Transaction Data
-st.write("### 📊 Transaction Data")
-st.dataframe(df, use_container_width=True)
+    values["V1"] = st.number_input("V1", value=0.0)
+    values["V2"] = st.number_input("V2", value=0.0)
+    values["V3"] = st.number_input("V3", value=0.0)
+    values["V4"] = st.number_input("V4", value=0.0)
+    values["V5"] = st.number_input("V5", value=0.0)
+    values["V6"] = st.number_input("V6", value=0.0)
+    values["V7"] = st.number_input("V7", value=0.0)
+    values["V8"] = st.number_input("V8", value=0.0)
+    values["V9"] = st.number_input("V9", value=0.0)
+    values["V10"] = st.number_input("V10", value=0.0)
+    values["V11"] = st.number_input("V11", value=0.0)
+    values["V12"] = st.number_input("V12", value=0.0)
+    values["V13"] = st.number_input("V13", value=0.0)
+    values["V14"] = st.number_input("V14", value=0.0)
 
-# Machine learning data
-X = df[["amount", "frequency"]]
-y = df["risk"]
+with col2:
 
-# Train/test split
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.2,
-    random_state=42
-)
+    values["V15"] = st.number_input("V15", value=0.0)
+    values["V16"] = st.number_input("V16", value=0.0)
+    values["V17"] = st.number_input("V17", value=0.0)
+    values["V18"] = st.number_input("V18", value=0.0)
+    values["V19"] = st.number_input("V19", value=0.0)
+    values["V20"] = st.number_input("V20", value=0.0)
+    values["V21"] = st.number_input("V21", value=0.0)
+    values["V22"] = st.number_input("V22", value=0.0)
+    values["V23"] = st.number_input("V23", value=0.0)
+    values["V24"] = st.number_input("V24", value=0.0)
+    values["V25"] = st.number_input("V25", value=0.0)
+    values["V26"] = st.number_input("V26", value=0.0)
+    values["V27"] = st.number_input("V27", value=0.0)
+    values["V28"] = st.number_input("V28", value=0.0)
 
-# Random Forest model
-model = RandomForestClassifier(
-    n_estimators=100,
-    random_state=42
-)
-
-# Train model
-model.fit(X_train, y_train)
-
-# Model evaluation
-predictions = model.predict(X_test)
-accuracy = accuracy_score(y_test, predictions)
-
-st.metric(
-    "Model Accuracy",
-    f"{accuracy * 100:.1f}%"
-)
-
-# Confusion Matrix
-cm = confusion_matrix(
-    y_test,
-    predictions,
-    labels=[0, 1]
-)
-
-st.write("### 🔍 Confusion Matrix")
-
-st.dataframe(
-    pd.DataFrame(
-        cm,
-        index=["Actual Safe", "Actual Fraud"],
-        columns=["Predicted Safe", "Predicted Fraud"]
+    values["Amount"] = st.number_input(
+        "Transaction Amount",
+        min_value=0.0,
+        value=100.0
     )
-)
 
-# Check a transaction
-st.write("### 🔎 Check a Transaction")
+# --------------------------------------------------
+# FRAUD ANALYSIS
+# --------------------------------------------------
 
-amount = st.number_input(
-    "Transaction Amount",
-    min_value=0.0,
-    value=500.0,
-    step=50.0
-)
+if st.button(
+    "🚨 Analyze Transaction",
+    use_container_width=True
+):
 
-frequency = st.number_input(
-    "Transaction Frequency",
-    min_value=1,
-    value=2,
-    step=1
-)
+    transaction = pd.DataFrame(
+        [values],
+        columns=feature_names
+    )
 
-if st.button("🔎 Analyze Transaction"):
-    user_data = pd.DataFrame({
-        "amount": [amount],
-        "frequency": [frequency]
-    })
+    probability = model.predict_proba(
+        transaction
+    )[0][1]
 
-    result = model.predict(user_data)[0]
+    # Risk classification
+    if probability >= threshold:
 
-    if result == 1:
-        st.error("⚠️ High Fraud Risk Detected")
+        risk_level = "HIGH RISK 🚨"
+
+    elif probability >= 0.10:
+
+        risk_level = "MEDIUM RISK ⚠️"
+
     else:
-        st.success("✅ Transaction Appears Safe")
 
-# Fraud Risk Distribution
-st.write("### 📊 Fraud Risk Distribution")
+        risk_level = "LOW RISK ✅"
 
-risk_counts = df["risk"].value_counts().rename(
-    index={
-        0: "Safe",
-        1: "Fraud Risk"
-    }
+    # --------------------------------------------------
+    # RESULTS
+    # --------------------------------------------------
+
+    st.write("### 📊 Fraud Analysis")
+
+    result_col1, result_col2 = st.columns(2)
+
+    with result_col1:
+
+        st.metric(
+            "Fraud Probability",
+            f"{probability:.2%}"
+        )
+
+    with result_col2:
+
+        st.metric(
+            "Risk Level",
+            risk_level
+        )
+
+    # --------------------------------------------------
+    # RISK MESSAGE
+    # --------------------------------------------------
+
+    if probability >= threshold:
+
+        st.error(
+            "🚨 HIGH FRAUD RISK\n\n"
+            "This transaction has a high estimated probability "
+            "of fraudulent activity. Additional verification "
+            "is recommended."
+        )
+
+    elif probability >= 0.10:
+
+        st.warning(
+            "⚠️ MEDIUM FRAUD RISK\n\n"
+            "This transaction shows unusual characteristics. "
+            "Additional review is recommended."
+        )
+
+    else:
+
+        st.success(
+            "✅ LOW FRAUD RISK\n\n"
+            "The transaction has a low estimated probability "
+            "of fraud."
+        )
+
+    # --------------------------------------------------
+    # MODEL INFORMATION
+    # --------------------------------------------------
+
+    st.write("### 🤖 Model Information")
+
+    info_col1, info_col2, info_col3 = st.columns(3)
+
+    with info_col1:
+
+        st.metric(
+            "Model",
+            "Random Forest"
+        )
+
+    with info_col2:
+
+        st.metric(
+            "Decision Threshold",
+            f"{threshold:.2f}"
+        )
+
+    with info_col3:
+
+        st.metric(
+            "Features",
+            "30"
+        )
+
+# --------------------------------------------------
+# FOOTER
+# --------------------------------------------------
+
+st.write("---")
+
+st.caption(
+    "FinGuard AI | Machine Learning Fraud Detection System"
 )
-
-st.bar_chart(risk_counts)
