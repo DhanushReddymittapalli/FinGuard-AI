@@ -18,6 +18,7 @@ st.set_page_config(
 
 model = joblib.load("finguard_model.pkl")
 threshold = joblib.load("finguard_threshold.pkl")
+demo_df = pd.read_csv("demo_transactions.csv")
 
 # --------------------------------------------------
 # HEADER
