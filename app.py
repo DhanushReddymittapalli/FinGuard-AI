@@ -156,9 +156,7 @@ if st.button(
     use_container_width=True
 ):
 
-    transaction = pd.DataFrame(
-        [values],
-        columns=feature_names
+    transaction = demo_transaction.copy()
     )
 
     probability = model.predict_proba(
