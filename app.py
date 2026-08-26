@@ -53,7 +53,7 @@ if all(column in df.columns for column in required_columns):
     accuracy = accuracy_score(y_test, predictions)
 
     st.metric(
-        "Model Accuracy",
+    "Model Accuracy",
         f"{accuracy * 100:.1f}%"
     )
     cm = confusion_matrix(y_test, predictions)
