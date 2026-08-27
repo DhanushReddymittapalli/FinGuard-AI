@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
-
-from model.predictor import predict_transaction, get_feature_importance
+from model import predictor
 
 
 # ============================================================
@@ -20,11 +19,11 @@ st.set_page_config(
 # ============================================================
 
 @st.cache_data
-def load_demo_data():
+def load_data():
     return pd.read_csv("demo_transactions_small.csv")
 
 
-df = load_demo_data()
+df = load_data()
 
 
 # ============================================================
@@ -41,7 +40,7 @@ st.write(
 
 
 # ============================================================
-# FRAUD MONITORING DASHBOARD
+# DASHBOARD
 # ============================================================
 
 st.write("### 📊 Fraud Monitoring Dashboard")
@@ -140,8 +139,8 @@ with m4:
 st.write("### 📁 Batch Fraud Detection")
 
 st.write(
-    "Upload a CSV containing transaction records. "
-    "FinGuard AI will analyze each transaction automatically."
+    "Upload a CSV containing transactions and "
+    "FinGuard AI will analyze them automatically."
 )
 
 uploaded_file = st.file_uploader(
@@ -156,7 +155,7 @@ if uploaded_file is not None:
 
         batch_df = pd.read_csv(uploaded_file)
 
-        st.write("#### 📄 Uploaded Transactions")
+        st.write("### 📄 Uploaded Transactions")
 
         st.dataframe(
             batch_df.head(10),
@@ -164,13 +163,10 @@ if uploaded_file is not None:
         )
 
         if "Class" in batch_df.columns:
-
             prediction_data = batch_df.drop(
                 columns=["Class"]
             )
-
         else:
-
             prediction_data = batch_df.copy()
 
 
@@ -181,7 +177,7 @@ if uploaded_file is not None:
 
             probabilities = []
 
-            progress = st.progress(0)
+            progress_bar = st.progress(0)
 
             total_rows = len(prediction_data)
 
@@ -191,7 +187,7 @@ if uploaded_file is not None:
                     [[i]]
                 ]
 
-                result = predict_transaction(
+                result = predictor.predict_transaction(
                     transaction_row
                 )
 
@@ -199,52 +195,65 @@ if uploaded_file is not None:
                     result["fraud_probability"]
                 )
 
-                probabilities.append(probability)
+                probabilities.append(
+                    probability
+                )
 
-                progress.progress(
-                    int(((i + 1) / total_rows) * 100)
+                progress_bar.progress(
+                    int(
+                        ((i + 1) / total_rows) * 100
+                    )
                 )
 
 
             results = batch_df.copy()
 
-            results["Fraud Probability"] = probabilities
+            results["Fraud Probability"] = (
+                probabilities
+            )
 
-            results["Risk Level"] = results[
-                "Fraud Probability"
-            ].apply(
-                lambda x:
-                "HIGH RISK 🚨"
-                if x >= 0.30
-                else (
-                    "MEDIUM RISK ⚠️"
-                    if x >= 0.10
-                    else "LOW RISK ✅"
+            results["Risk Level"] = (
+                results["Fraud Probability"]
+                .apply(
+                    lambda x:
+                    "HIGH RISK 🚨"
+                    if x >= 0.30
+                    else (
+                        "MEDIUM RISK ⚠️"
+                        if x >= 0.10
+                        else "LOW RISK ✅"
+                    )
                 )
             )
 
-            results["Recommended Action"] = results[
-                "Fraud Probability"
-            ].apply(
-                lambda x:
-                "BLOCK"
-                if x >= 0.30
-                else (
-                    "MANUAL REVIEW"
-                    if x >= 0.10
-                    else "APPROVE"
+            results["Recommended Action"] = (
+                results["Fraud Probability"]
+                .apply(
+                    lambda x:
+                    "BLOCK"
+                    if x >= 0.30
+                    else (
+                        "MANUAL REVIEW"
+                        if x >= 0.10
+                        else "APPROVE"
+                    )
                 )
             )
 
 
-            # ------------------------------------------------
+            # =================================================
             # BATCH SUMMARY
-            # ------------------------------------------------
+            # =================================================
 
-            st.write("### 📊 Batch Analysis Summary")
+            st.write(
+                "### 📊 Batch Analysis Summary"
+            )
 
             predicted_fraud = int(
-                (results["Fraud Probability"] >= 0.30).sum()
+                (
+                    results["Fraud Probability"]
+                    >= 0.30
+                ).sum()
             )
 
             predicted_legitimate = (
@@ -285,10 +294,6 @@ if uploaded_file is not None:
                 )
 
 
-            # ------------------------------------------------
-            # HIGH RISK ALERT
-            # ------------------------------------------------
-
             if predicted_fraud > 0:
 
                 st.error(
@@ -303,11 +308,13 @@ if uploaded_file is not None:
                 )
 
 
-            # ------------------------------------------------
+            # =================================================
             # RESULTS
-            # ------------------------------------------------
+            # =================================================
 
-            st.write("### 🔍 Batch Detection Results")
+            st.write(
+                "### 🔍 Batch Detection Results"
+            )
 
             display_results = results.copy()
 
@@ -325,33 +332,32 @@ if uploaded_file is not None:
             )
 
 
-            # ------------------------------------------------
+            # =================================================
             # DOWNLOAD RESULTS
-            # ------------------------------------------------
+            # =================================================
 
-            csv_results = results.to_csv(
+            csv_data = results.to_csv(
                 index=False
             ).encode("utf-8")
 
             st.download_button(
-                label="📥 Download Analysis Results",
-                data=csv_results,
+                "📥 Download Analysis Results",
+                data=csv_data,
                 file_name="finguard_batch_results.csv",
                 mime="text/csv",
                 use_container_width=True
             )
 
 
-    except Exception as e:
+    except Exception:
 
         st.error(
             "❌ Unable to analyze this CSV."
         )
 
         st.info(
-            "Please make sure the uploaded file "
-            "contains the same transaction features "
-            "used by the FinGuard AI model."
+            "Please upload a CSV containing the same "
+            "transaction features used by the model."
         )
 
 
@@ -392,7 +398,7 @@ st.dataframe(
 
 
 # ============================================================
-# ANALYZE BUTTON
+# ANALYZE TRANSACTION
 # ============================================================
 
 if st.button(
@@ -402,11 +408,7 @@ if st.button(
 
     try:
 
-        # ----------------------------------------------------
-        # MODEL PREDICTION
-        # ----------------------------------------------------
-
-        result = predict_transaction(
+        result = predictor.predict_transaction(
             transaction
         )
 
@@ -417,9 +419,9 @@ if st.button(
         risk = result["risk_level"]
 
 
-        # ----------------------------------------------------
+        # ====================================================
         # FRAUD ANALYSIS
-        # ----------------------------------------------------
+        # ====================================================
 
         st.write("### 📊 Fraud Analysis")
 
@@ -437,21 +439,20 @@ if st.button(
                 risk
             )
 
+        risk_score = round(
+            probability * 100
+        )
+
         with r3:
-
-            risk_score = round(
-                probability * 100
-            )
-
             st.metric(
                 "Risk Score",
                 f"{risk_score}/100"
             )
 
 
-        # ----------------------------------------------------
-        # RISK PROGRESS
-        # ----------------------------------------------------
+        # ====================================================
+        # RISK SCORE
+        # ====================================================
 
         st.write("### 🎯 Fraud Risk Score")
 
@@ -460,17 +461,35 @@ if st.button(
         )
 
 
-        # ----------------------------------------------------
-        # EXPLAINABILITY
-        # ----------------------------------------------------
+        if risk_score >= 30:
+
+            st.write(
+                f"🔴 **Elevated Risk: "
+                f"{risk_score}/100**"
+            )
+
+        else:
+
+            st.write(
+                f"🟢 **Low Risk: "
+                f"{risk_score}/100**"
+            )
+
+
+        # ====================================================
+        # EXPLANATION
+        # ====================================================
 
         st.write(
             "### 🔎 Why was this transaction flagged?"
         )
 
-        importance = get_feature_importance(
-            transaction
+        importance = (
+            predictor.get_feature_importance(
+                transaction
+            )
         )
+
 
         if (
             importance is not None
@@ -485,14 +504,13 @@ if st.button(
         else:
 
             st.info(
-                "Feature explanation is not available "
-                "for this transaction."
+                "Feature explanation is not available."
             )
 
 
-        # ----------------------------------------------------
+        # ====================================================
         # RISK EXPLANATION
-        # ----------------------------------------------------
+        # ====================================================
 
         if risk.startswith("HIGH"):
 
@@ -518,9 +536,9 @@ if st.button(
             )
 
 
-        # ----------------------------------------------------
+        # ====================================================
         # RECOMMENDED ACTION
-        # ----------------------------------------------------
+        # ====================================================
 
         st.write("### 🛡️ Recommended Action")
 
@@ -552,9 +570,9 @@ if st.button(
             )
 
 
-        # ----------------------------------------------------
+        # ====================================================
         # ACTUAL DATASET LABEL
-        # ----------------------------------------------------
+        # ====================================================
 
         st.write("### 🎯 Actual Dataset Label")
 
@@ -567,9 +585,9 @@ if st.button(
             st.success("✅ LEGITIMATE")
 
 
-        # ----------------------------------------------------
+        # ====================================================
         # MODEL VERIFICATION
-        # ----------------------------------------------------
+        # ====================================================
 
         st.write("### 🧠 Model Verification")
 
@@ -578,7 +596,9 @@ if st.button(
         )
 
 
-        if predicted_fraud == bool(actual_label):
+        if predicted_fraud == bool(
+            actual_label
+        ):
 
             st.success(
                 "✅ Model prediction matches "
@@ -600,8 +620,8 @@ if st.button(
         )
 
         st.info(
-            "Please check that the model and transaction "
-            "features are compatible."
+            "Please check that predictor.py, the model "
+            "file, and transaction features are compatible."
         )
 
 
@@ -615,4 +635,5 @@ st.caption(
     "FinGuard AI | Random Forest Fraud Detection | "
     "Explainable AI | Batch Fraud Detection | "
     "ULB Credit Card Fraud Detection Dataset"
-    )
+                       )
+            
