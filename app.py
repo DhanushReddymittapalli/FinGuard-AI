@@ -155,6 +155,15 @@ if st.button(
             "Risk Level",
             risk
         )
+                st.write("### 🔍 Why was this transaction flagged?")
+
+        importance = get_feature_importance(transaction)
+
+        if not importance.empty:
+            st.dataframe(
+                importance.head(5),
+                use_container_width=True
+            )
 
     if probability >= threshold:
 
