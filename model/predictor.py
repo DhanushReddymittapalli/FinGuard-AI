@@ -4,34 +4,37 @@ import pandas as pd
 import shap
 
 
-# --------------------------------------------------
-# PATHS
-# --------------------------------------------------
+# ============================================================
+# FILE PATHS
+# ============================================================
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MODEL_PATH = BASE_DIR / "fingu​​ard_model.pkl"
-THRESHOLD_PATH = BASE_DIR / "fingu​​ard_threshold.pkl"
+MODEL_PATH = BASE_DIR / "finguard_model.pkl"
+THRESHOLD_PATH = BASE_DIR / "finguard_threshold.pkl"
 
 
-# --------------------------------------------------
-# LOAD MODEL
-# --------------------------------------------------
+# ============================================================
+# LOAD MODEL AND THRESHOLD
+# ============================================================
 
 model = joblib.load(MODEL_PATH)
-threshold = float(joblib.load(THRESHOLD_PATH))
+
+threshold = float(
+    joblib.load(THRESHOLD_PATH)
+)
 
 
-# --------------------------------------------------
+# ============================================================
 # SHAP EXPLAINER
-# --------------------------------------------------
+# ============================================================
 
 explainer = shap.TreeExplainer(model)
 
 
-# --------------------------------------------------
+# ============================================================
 # PREDICT TRANSACTION
-# --------------------------------------------------
+# ============================================================
 
 def predict_transaction(transaction):
 
@@ -41,8 +44,10 @@ def predict_transaction(transaction):
 
     if probability >= threshold:
         risk = "HIGH RISK"
+
     elif probability >= 0.10:
         risk = "MEDIUM RISK"
+
     else:
         risk = "LOW RISK"
 
@@ -53,9 +58,9 @@ def predict_transaction(transaction):
     }
 
 
-# --------------------------------------------------
-# FEATURE IMPORTANCE / EXPLANATION
-# --------------------------------------------------
+# ============================================================
+# FEATURE IMPORTANCE
+# ============================================================
 
 def get_feature_importance(transaction):
 
@@ -63,7 +68,7 @@ def get_feature_importance(transaction):
 
         shap_values = explainer.shap_values(transaction)
 
-        # Handle different SHAP output formats
+        # Handle older SHAP output format
         if isinstance(shap_values, list):
 
             if len(shap_values) > 1:
@@ -75,6 +80,7 @@ def get_feature_importance(transaction):
 
             values = shap_values
 
+            # Handle newer SHAP output formats
             if hasattr(values, "ndim"):
 
                 if values.ndim == 3:
@@ -83,16 +89,17 @@ def get_feature_importance(transaction):
                 elif values.ndim == 2:
                     values = values[0]
 
-        values = pd.Series(
-            values,
-            index=transaction.columns
-        )
+        values = list(values)
 
-        importance = pd.DataFrame({
-            "feature": values.index,
-            "SHAP Impact": values.values,
-            "absolute_impact": values.abs().values
-        })
+        importance = pd.DataFrame(
+            {
+                "feature": transaction.columns,
+                "SHAP Impact": values,
+                "absolute_impact": [
+                    abs(value) for value in values
+                ]
+            }
+        )
 
         importance = importance.sort_values(
             "absolute_impact",
@@ -103,24 +110,19 @@ def get_feature_importance(transaction):
 
     except Exception:
 
-        # Fallback to Random Forest feature importance
+        # ----------------------------------------------------
+        # FALLBACK TO RANDOM FOREST FEATURE IMPORTANCE
+        # ----------------------------------------------------
+
         if hasattr(model, "feature_importances_"):
 
-            importance = pd.DataFrame({
-                "feature": transaction.columns,
-                "SHAP Impact": model.feature_importances_,
-                "absolute_impact": model.feature_importances_
-            })
+            importance = pd.DataFrame(
+                {
+                    "feature": transaction.columns,
+                    "SHAP Impact": model.feature_importances_,
+                    "absolute_impact": model.feature_importances_
+                }
+            )1
 
-            return importance.sort_values(
-                "absolute_impact",
-                ascending=False
-            ).reset_index(drop=True)
-
-        return pd.DataFrame(
-            columns=[
-                "feature",
-                "SHAP Impact",
-                "absolute_impact"
-            ]
-        )
+            importance = importance.sort_values(
+                "absolute
