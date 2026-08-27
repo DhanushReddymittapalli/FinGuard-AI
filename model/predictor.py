@@ -1,36 +1,191 @@
-import streamlit as st
+from pathlib import Path
+
+import joblib
 import pandas as pd
 
-st.set_page_config(
-    page_title="FinGuard AI",
-    page_icon="🛡️",
-    layout="wide"
-)
 
-st.title("🛡️ FinGuard AI")
-st.subheader("AI-Powered Credit Card Fraud Detection")
+# ============================================================
+# PATHS
+# ============================================================
 
-st.success("✅ FinGuard AI is running successfully!")
+BASE_DIR = Path(__file__).resolve().parent.parent
 
-df = pd.read_csv("demo_transactions_small.csv")
+MODEL_PATH = BASE_DIR / "finguard_model.pkl"
+THRESHOLD_PATH = BASE_DIR / "finguard_threshold.pkl"
 
-st.write("### 📊 Dataset")
-st.metric("Total Transactions", len(df))
 
-if "Class" in df.columns:
-    fraud = int(df["Class"].sum())
-    legitimate = len(df) - fraud
+# ============================================================
+# LOAD MODEL
+# ============================================================
 
-    c1, c2, c3 = st.columns(3)
+if not MODEL_PATH.exists():
+    raise FileNotFoundError(
+        f"Model file not found: {MODEL_PATH}"
+    )
 
-    with c1:
-        st.metric("Transactions", len(df))
+model = joblib.load(MODEL_PATH)
 
-    with c2:
-        st.metric("Fraud", fraud)
 
-    with c3:
-        st.metric("Legitimate", legitimate)
+# ============================================================
+# LOAD THRESHOLD
+# ============================================================
 
-    st.dataframe(df.head(10), use_container_width=True)
-    
+if THRESHOLD_PATH.exists():
+    threshold = float(
+        joblib.load(THRESHOLD_PATH)
+    )
+else:
+    threshold = 0.30
+
+
+# ============================================================
+# PREDICT TRANSACTION
+# ============================================================
+
+def predict_transaction(transaction):
+    """
+    Predict fraud probability for one transaction.
+
+    Parameters
+    ----------
+    transaction : pandas.DataFrame
+        One transaction containing the model features.
+
+    Returns
+    -------
+    dict
+        Fraud probability, risk level and threshold.
+    """
+
+    if not isinstance(transaction, pd.DataFrame):
+        transaction = pd.DataFrame(transaction)
+
+    transaction = transaction.copy()
+
+    # Remove target column if accidentally supplied
+    if "Class" in transaction.columns:
+        transaction = transaction.drop(
+            columns=["Class"]
+        )
+
+    # Make sure the model receives the same
+    # features and order used during training.
+    if hasattr(model, "feature_names_in_"):
+
+        expected_features = list(
+            model.feature_names_in_
+        )
+
+        missing_features = [
+            feature
+            for feature in expected_features
+            if feature not in transaction.columns
+        ]
+
+        if missing_features:
+            raise ValueError(
+                "Missing model features: "
+                + ", ".join(missing_features)
+            )
+
+        transaction = transaction[
+            expected_features
+        ]
+
+    probability = float(
+        model.predict_proba(transaction)[0][1]
+    )
+
+    if probability >= threshold:
+        risk_level = "HIGH RISK"
+    elif probability >= 0.10:
+        risk_level = "MEDIUM RISK"
+    else:
+        risk_level = "LOW RISK"
+
+    return {
+        "fraud_probability": probability,
+        "risk_level": risk_level,
+        "threshold": threshold
+    }
+
+
+# ============================================================
+# FEATURE IMPORTANCE
+# ============================================================
+
+def get_feature_importance(transaction):
+    """
+    Return feature importance for the transaction.
+
+    Uses Random Forest feature importance.
+    """
+
+    if not isinstance(transaction, pd.DataFrame):
+        transaction = pd.DataFrame(transaction)
+
+    transaction = transaction.copy()
+
+    if "Class" in transaction.columns:
+        transaction = transaction.drop(
+            columns=["Class"]
+        )
+
+    # Align features with the trained model
+    if hasattr(model, "feature_names_in_"):
+
+        expected_features = list(
+            model.feature_names_in_
+        )
+
+        missing_features = [
+            feature
+            for feature in expected_features
+            if feature not in transaction.columns
+        ]
+
+        if missing_features:
+            raise ValueError(
+                "Missing model features: "
+                + ", ".join(missing_features)
+            )
+
+        features = expected_features
+
+    else:
+        features = list(
+            transaction.columns
+        )
+
+    # Random Forest feature importance
+    if hasattr(model, "feature_importances_"):
+
+        importances = list(
+            model.feature_importances_
+        )
+
+        if len(importances) != len(features):
+            raise ValueError(
+                "Number of model features does not "
+                "match feature importance values."
+            )
+
+        importance_df = pd.DataFrame(
+            {
+                "feature": features,
+                "importance": importances
+            }
+        )
+
+        # Sort from most important to least important
+        importance_df = importance_df.sort_values(
+            by="importance",
+            ascending=False
+        ).reset_index(drop=True)
+
+        return importance_df
+
+    raise ValueError(
+        "The loaded model does not provide "
+        "feature_importances_."
+    )
