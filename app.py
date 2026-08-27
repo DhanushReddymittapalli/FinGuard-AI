@@ -221,6 +221,31 @@ if st.button(
             "The model estimates a low probability "
             "of fraud."
         )
+        # --------------------------
+# RECOMMENDED ACTION
+# --------------------------
+
+st.write("### 🛡️ Recommended Action")
+
+if risk == "HIGH RISK 🚨":
+    st.error(
+        "🚫 BLOCK TRANSACTION\n\n"
+        "This transaction has a high fraud risk. "
+        "The transaction should be blocked or sent for immediate investigation."
+    )
+
+elif risk == "MEDIUM RISK ⚠️":
+    st.warning(
+        "🔎 MANUAL REVIEW REQUIRED\n\n"
+        "This transaction shows suspicious behavior. "
+        "Additional verification is recommended before approval."
+    )
+
+else:
+    st.success(
+        "✅ APPROVE TRANSACTION\n\n"
+        "This transaction has a low estimated fraud risk."
+    )
 
     # -----------------------------
     # ACTUAL DATASET LABEL
