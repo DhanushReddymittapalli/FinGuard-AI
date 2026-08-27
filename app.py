@@ -1,7 +1,11 @@
 import streamlit as st
 import pandas as pd
 
-from model.predictor import predict_transaction, get_feature_importance
+from model.predictor import (
+    predict_transaction,
+    get_feature_importance,
+    predict_transaction_batch
+)
 
 
 # --------------------------------------------------
