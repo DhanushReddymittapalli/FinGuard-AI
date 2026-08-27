@@ -134,3 +134,11 @@ def get_feature_importance(transaction):
                 "absolute_impact"
             ]
         )
+        def predict_transaction_batch(transactions):
+    """
+    Predict fraud probability for multiple transactions.
+    """
+
+    probabilities = model.predict_proba(transactions)[:, 1]
+
+    return probabilities.tolist()
