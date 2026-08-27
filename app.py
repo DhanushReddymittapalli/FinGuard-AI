@@ -137,4 +137,4 @@ if "Class" in df.columns:
 
 else:
     st.info(
-        "Class
+        if "Class" in df.columns:
