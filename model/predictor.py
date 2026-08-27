@@ -1,144 +1,36 @@
-from pathlib import Path
-import joblib
+import streamlit as st
 import pandas as pd
-import shap
 
+st.set_page_config(
+    page_title="FinGuard AI",
+    page_icon="🛡️",
+    layout="wide"
+)
 
-# ============================================================
-# PATHS
-# ============================================================
+st.title("🛡️ FinGuard AI")
+st.subheader("AI-Powered Credit Card Fraud Detection")
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+st.success("✅ FinGuard AI is running successfully!")
 
-MODEL_PATH = BASE_DIR / "finguard_model.pkl"
-THRESHOLD_PATH = BASE_DIR / "finguard_threshold.pkl"
+df = pd.read_csv("demo_transactions_small.csv")
 
+st.write("### 📊 Dataset")
+st.metric("Total Transactions", len(df))
 
-# ============================================================
-# LOAD MODEL
-# ============================================================
+if "Class" in df.columns:
+    fraud = int(df["Class"].sum())
+    legitimate = len(df) - fraud
 
-model = joblib.load(MODEL_PATH)
+    c1, c2, c3 = st.columns(3)
 
+    with c1:
+        st.metric("Transactions", len(df))
 
-# ============================================================
-# LOAD THRESHOLD
-# ============================================================
+    with c2:
+        st.metric("Fraud", fraud)
 
-threshold = float(joblib.load(THRESHOLD_PATH))
+    with c3:
+        st.metric("Legitimate", legitimate)
 
-
-# ============================================================
-# SHAP EXPLAINER
-# ============================================================
-
-explainer = shap.TreeExplainer(model)
-
-
-# ============================================================
-# PREDICT TRANSACTION
-# ============================================================
-
-def predict_transaction(transaction):
-
-    probability = float(
-        model.predict_proba(transaction)[0][1]
-    )
-
-    if probability >= threshold:
-        risk = "HIGH RISK"
-    elif probability >= 0.10:
-        risk = "MEDIUM RISK"
-    else:
-        risk = "LOW RISK"
-
-    return {
-        "fraud_probability": probability,
-        "risk_level": risk,
-        "threshold": threshold
-    }
-
-
-# ============================================================
-# FEATURE IMPORTANCE
-# ============================================================
-
-def get_feature_importance(transaction):
-
-    try:
-
-        shap_values = explainer.shap_values(transaction)
-
-        if isinstance(shap_values, list):
-
-            if len(shap_values) > 1:
-                values = shap_values[1][0]
-            else:
-                values = shap_values[0][0]
-
-        else:
-
-            values = shap_values
-
-            if hasattr(values, "ndim"):
-
-                if values.ndim == 3:
-                    values = values[0, :, 1]
-
-                elif values.ndim == 2:
-                    values = values[0]
-
-        values = list(values)
-
-        importance = pd.DataFrame(
-            {
-                "feature": transaction.columns,
-                "SHAP Impact": values,
-                "absolute_impact": [
-                    abs(value) for value in values
-                ]
-            }
-        )
-
-        importance = importance.sort_values(
-            "absolute_impact",
-            ascending=False
-        )
-
-        return importance.reset_index(drop=True)
-
-    except Exception:
-
-        # Random Forest fallback
-        if hasattr(model, "feature_importances_"):
-
-            importance = pd.DataFrame(
-                {
-                    "feature": transaction.columns,
-                    "SHAP Impact": model.feature_importances_,
-                    "absolute_impact": model.feature_importances_
-                }
-            )
-
-            importance = importance.sort_values(
-                "absolute_impact",
-                ascending=False
-            )
-
-            return importance.reset_index(drop=True)
-
-        return pd.DataFrame(
-            columns=[
-                "feature",
-                "SHAP Impact",
-                "absolute_impact"
-            ]
-        )
-        def predict_transaction_batch(transactions):
-    """
-    Predict fraud probability for multiple transactions.
-    """
-
-    probabilities = model.predict_proba(transactions)[:, 1]
-
-    return probabilities.tolist()
+    st.dataframe(df.head(10), use_container_width=True)
+    
