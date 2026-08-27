@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import model.predictor as predictor
+st.title("FinGuard AI")
+st.write("Test successful")
 
 
 # ============================================================
