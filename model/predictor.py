@@ -1,4 +1,4 @@
-    from pathlib import Path
+from pathlib import Path
 
 import joblib
 import pandas as pd
@@ -10,7 +10,7 @@ import pandas as pd
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MODEL_PATH = BASE_DIR / "finguard_model.pkl"
+MODEL_PATH = BASE_DIR / "fingu​ard_model.pkl"
 THRESHOLD_PATH = BASE_DIR / "finguard_threshold.pkl"
 
 
@@ -27,63 +27,47 @@ model = joblib.load(MODEL_PATH)
 
 
 # ============================================================
-# LOAD DECISION THRESHOLD
+# LOAD THRESHOLD
 # ============================================================
 
 if THRESHOLD_PATH.exists():
-    threshold = float(joblib.load(THRESHOLD_PATH))
+    threshold = joblib.load(THRESHOLD_PATH)
+
+    # Handle numpy/scalar/list-like saved thresholds safely
+    try:
+        threshold = float(threshold)
+    except (TypeError, ValueError):
+        threshold = float(threshold[0])
 else:
     threshold = 0.30
 
 
 # ============================================================
-# MODEL FEATURES
-# ============================================================
-
-if hasattr(model, "feature_names_in_"):
-    MODEL_FEATURES = list(model.feature_names_in_)
-else:
-    MODEL_FEATURES = None
-
-
-# ============================================================
-# PREPARE TRANSACTION
+# INTERNAL HELPERS
 # ============================================================
 
 def _prepare_transaction(transaction):
     """
-    Prepare one transaction so that it matches
-    the features used while training the model.
+    Prepare a transaction DataFrame so that its columns match
+    the features used by the trained model.
     """
 
-    if isinstance(transaction, pd.Series):
-        transaction = transaction.to_frame().T
-
-    elif not isinstance(transaction, pd.DataFrame):
+    if not isinstance(transaction, pd.DataFrame):
         transaction = pd.DataFrame(transaction)
 
     transaction = transaction.copy()
 
-    # Remove target column if supplied
+    # Remove target if accidentally supplied
     if "Class" in transaction.columns:
         transaction = transaction.drop(columns=["Class"])
 
-    # Make sure all values are numeric
-    for column in transaction.columns:
-        transaction[column] = pd.to_numeric(
-            transaction[column],
-            errors="coerce"
-        )
-
-    # Replace invalid values
-    transaction = transaction.fillna(0)
-
-    # Match training feature order
-    if MODEL_FEATURES is not None:
+    # Get feature names from the trained model
+    if hasattr(model, "feature_names_in_"):
+        expected_features = list(model.feature_names_in_)
 
         missing_features = [
             feature
-            for feature in MODEL_FEATURES
+            for feature in expected_features
             if feature not in transaction.columns
         ]
 
@@ -93,9 +77,62 @@ def _prepare_transaction(transaction):
                 + ", ".join(missing_features)
             )
 
-        transaction = transaction[MODEL_FEATURES]
+        # Correct column order
+        transaction = transaction[expected_features]
 
     return transaction
+
+
+def _get_probability(transaction):
+    """
+    Return fraud probability for a transaction.
+    """
+
+    prepared = _prepare_transaction(transaction)
+
+    if not hasattr(model, "predict_proba"):
+        raise ValueError(
+            "Loaded model does not support predict_proba()."
+        )
+
+    probability = float(
+        model.predict_proba(prepared)[0][1]
+    )
+
+    # Safety bounds
+    probability = max(0.0, min(1.0, probability))
+
+    return probability
+
+
+def _get_risk_level(probability):
+    """
+    Convert fraud probability into a human-readable risk level.
+    """
+
+    if probability >= threshold:
+        return "HIGH RISK"
+
+    elif probability >= 0.10:
+        return "MEDIUM RISK"
+
+    else:
+        return "LOW RISK"
+
+
+def _get_decision(probability):
+    """
+    Convert probability into an operational decision.
+    """
+
+    if probability >= threshold:
+        return "BLOCK / INVESTIGATE"
+
+    elif probability >= 0.10:
+        return "MANUAL REVIEW"
+
+    else:
+        return "APPROVE"
 
 
 # ============================================================
@@ -104,39 +141,36 @@ def _prepare_transaction(transaction):
 
 def predict_transaction(transaction):
     """
-    Predict fraud probability for one transaction.
+    Predict fraud probability, risk level and recommended
+    operational decision for one transaction.
 
-    Returns:
-        dict containing:
-        - fraud_probability
-        - risk_level
-        - threshold
-        - decision
+    Parameters
+    ----------
+    transaction : pandas.DataFrame
+        One transaction containing the model features.
+
+    Returns
+    -------
+    dict
+        fraud_probability
+        fraud_percentage
+        risk_level
+        decision
+        threshold
     """
 
-    transaction = _prepare_transaction(transaction)
+    probability = _get_probability(transaction)
 
-    probability = float(
-        model.predict_proba(transaction)[0][1]
-    )
+    risk_level = _get_risk_level(probability)
 
-    if probability >= threshold:
-        risk_level = "HIGH RISK"
-        decision = "BLOCK / REVIEW"
-
-    elif probability >= 0.10:
-        risk_level = "MEDIUM RISK"
-        decision = "REVIEW"
-
-    else:
-        risk_level = "LOW RISK"
-        decision = "ALLOW"
+    decision = _get_decision(probability)
 
     return {
         "fraud_probability": probability,
+        "fraud_percentage": probability * 100,
         "risk_level": risk_level,
-        "threshold": threshold,
         "decision": decision,
+        "threshold": threshold,
     }
 
 
@@ -148,48 +182,50 @@ def get_feature_importance(transaction=None):
     """
     Return global Random Forest feature importance.
 
-    This shows which features are generally important
-    to the trained model.
+    The transaction argument is accepted for compatibility
+    with the Streamlit application.
     """
 
     if not hasattr(model, "feature_importances_"):
         raise ValueError(
-            "The loaded model does not provide "
-            "feature_importances_."
+            "The loaded model does not provide feature_importances_."
         )
 
     importances = list(model.feature_importances_)
 
-    if MODEL_FEATURES is not None:
-        features = MODEL_FEATURES
-    elif transaction is not None:
-
-        if isinstance(transaction, pd.Series):
-            features = list(transaction.index)
-        else:
-            features = list(transaction.columns)
-
-        if "Class" in features:
-            features.remove("Class")
-
+    if hasattr(model, "feature_names_in_"):
+        features = list(model.feature_names_in_)
     else:
-        features = [
-            f"Feature_{i}"
-            for i in range(len(importances))
-        ]
+        if transaction is None:
+            raise ValueError(
+                "Feature names are unavailable. "
+                "Provide a transaction DataFrame."
+            )
 
-    if len(features) != len(importances):
+        if not isinstance(transaction, pd.DataFrame):
+            transaction = pd.DataFrame(transaction)
+
+        transaction = transaction.copy()
+
+        if "Class" in transaction.columns:
+            transaction = transaction.drop(columns=["Class"])
+
+        features = list(transaction.columns)
+
+    if len(importances) != len(features):
         raise ValueError(
-            "Number of features does not match "
-            "number of importance values."
+            "Number of model features does not match "
+            "number of feature importance values."
         )
 
-    importance_df = pd.DataFrame({
-        "feature": features,
-        "importance": importances
-    })
+    importance_df = pd.DataFrame(
+        {
+            "feature": features,
+            "importance": importances,
+        }
+    )
 
-    return (
+    importance_df = (
         importance_df
         .sort_values(
             by="importance",
@@ -198,125 +234,11 @@ def get_feature_importance(transaction=None):
         .reset_index(drop=True)
     )
 
-
-# ============================================================
-# SHAP EXPLANATION
-# ============================================================
-
-def get_shap_explanation(transaction, top_n=10):
-    """
-    Generate a transaction-level SHAP explanation.
-
-    Returns a DataFrame containing:
-        feature
-        value
-        shap_value
-        absolute_impact
-        impact
-    """
-
-    try:
-        import shap
-    except ImportError:
-        raise ImportError(
-            "SHAP is not installed. Add 'shap' "
-            "to requirements.txt."
-        )
-
-    transaction = _prepare_transaction(transaction)
-
-    # TreeExplainer works well with Random Forest
-    explainer = shap.TreeExplainer(model)
-
-    shap_values = explainer.shap_values(transaction)
-
-    # Handle different SHAP versions / output formats
-    if isinstance(shap_values, list):
-
-        if len(shap_values) > 1:
-            values = shap_values[1][0]
-        else:
-            values = shap_values[0][0]
-
-    else:
-
-        values = shap_values
-
-        # Newer SHAP versions can return:
-        # (samples, features, classes)
-        if hasattr(values, "ndim"):
-
-            if values.ndim == 3:
-                values = values[0, :, 1]
-
-            elif values.ndim == 2:
-                values = values[0]
-
-    values = list(values)
-
-    feature_names = list(transaction.columns)
-    feature_values = transaction.iloc[0].tolist()
-
-    explanation = pd.DataFrame({
-        "feature": feature_names,
-        "value": feature_values,
-        "shap_value": values
-    })
-
-    explanation["absolute_impact"] = (
-        explanation["shap_value"].abs()
-    )
-
-    explanation["impact"] = explanation["shap_value"].apply(
-        lambda x: (
-            "Increases fraud risk"
-            if x > 0
-            else "Decreases fraud risk"
-        )
-    )
-
-    explanation = (
-        explanation
-        .sort_values(
-            by="absolute_impact",
-            ascending=False
-        )
-        .head(top_n)
-        .reset_index(drop=True)
-    )
-
-    return explanation
+    return importance_df
 
 
 # ============================================================
-# COMPLETE TRANSACTION ANALYSIS
+# BATCH FRAUD DETECTION
 # ============================================================
 
-def analyze_transaction(transaction, top_n=10):
-    """
-    Run prediction + SHAP explanation together.
-    """
-
-    prediction = predict_transaction(transaction)
-
-    try:
-        explanation = get_shap_explanation(
-            transaction,
-            top_n=top_n
-        )
-    except Exception:
-        explanation = get_feature_importance(
-            transaction
-        ).head(top_n)
-
-        explanation["value"] = 0
-        explanation["shap_value"] = 0
-        explanation["absolute_impact"] = (
-            explanation["importance"]
-        )
-        explanation["impact"] = "Global model importance"
-
-    return {
-        "prediction": prediction,
-        "explanation": explanation
-    }
+def
