@@ -8,7 +8,7 @@ from model.predictor import (
 
 
 # ============================================================
-# PAGE CONFIG
+# PAGE CONFIGURATION
 # ============================================================
 
 st.set_page_config(
@@ -25,25 +25,25 @@ st.set_page_config(
 st.title("🛡️ FinGuard AI")
 st.subheader("AI-Powered Credit Card Fraud Detection")
 
-st.caption(
+st.write(
     "AI-powered machine-learning system for detecting "
     "and analyzing suspicious credit-card transactions."
 )
 
 
 # ============================================================
-# LOAD DATASET
+# LOAD DEMO DATASET
 # ============================================================
 
 try:
     df = pd.read_csv("demo_transactions_small.csv")
 except Exception as e:
-    st.error(f"Unable to load dataset: {e}")
+    st.error(f"Could not load demo dataset: {e}")
     st.stop()
 
 
 # ============================================================
-# DATASET DASHBOARD
+# FRAUD MONITORING DASHBOARD
 # ============================================================
 
 st.header("📊 Fraud Monitoring Dashboard")
@@ -51,42 +51,39 @@ st.header("📊 Fraud Monitoring Dashboard")
 total_transactions = len(df)
 
 if "Class" in df.columns:
-    fraud_transactions = int(df["Class"].sum())
+    fraud_cases = int(df["Class"].sum())
 else:
-    fraud_transactions = 0
+    fraud_cases = 0
 
-legitimate_transactions = (
-    total_transactions - fraud_transactions
-)
+legitimate_cases = total_transactions - fraud_cases
 
-fraud_rate = (
-    fraud_transactions / total_transactions * 100
-    if total_transactions > 0
-    else 0
-)
+if total_transactions > 0:
+    fraud_rate = (fraud_cases / total_transactions) * 100
+else:
+    fraud_rate = 0.0
 
 
-c1, c2, c3, c4 = st.columns(4)
+col1, col2, col3, col4 = st.columns(4)
 
-with c1:
+with col1:
     st.metric(
         "Transactions",
         f"{total_transactions:,}"
     )
 
-with c2:
+with col2:
     st.metric(
         "Fraud Cases",
-        f"{fraud_transactions:,}"
+        f"{fraud_cases:,}"
     )
 
-with c3:
+with col3:
     st.metric(
         "Legitimate",
-        f"{legitimate_transactions:,}"
+        f"{legitimate_cases:,}"
     )
 
-with c4:
+with col4:
     st.metric(
         "Fraud Rate",
         f"{fraud_rate:.2f}%"
@@ -101,16 +98,21 @@ st.header("📈 Dataset Distribution")
 
 if "Class" in df.columns:
 
-    distribution = pd.DataFrame({
-        "Type": ["Fraud", "Legitimate"],
-        "Count": [
-            fraud_transactions,
-            legitimate_transactions
-        ]
-    })
+    chart_df = pd.DataFrame(
+        {
+            "Type": [
+                "Fraud",
+                "Legitimate"
+            ],
+            "Count": [
+                fraud_cases,
+                legitimate_cases
+            ],
+        }
+    )
 
     st.bar_chart(
-        distribution.set_index("Type")
+        chart_df.set_index("Type")
     )
 
 
@@ -120,50 +122,60 @@ if "Class" in df.columns:
 
 st.header("⚙️ Model Performance")
 
-m1, m2, m3 = st.columns(3)
+model_col1, model_col2, model_col3 = st.columns(3)
 
-with m1:
-    st.metric("Model", "Random Forest")
+with model_col1:
+    st.metric(
+        "Model",
+        "Random Forest"
+    )
 
-with m2:
-    st.metric("ROC-AUC", "0.953")
+with model_col2:
+    st.metric(
+        "ROC-AUC",
+        "0.953"
+    )
 
-with m3:
-    st.metric("PR-AUC", "0.854")
+with model_col3:
+    st.metric(
+        "PR-AUC",
+        "0.854"
+    )
 
-st.caption("Decision threshold: 0.30")
+st.caption(
+    "Decision threshold: 0.30"
+)
 
 
 # ============================================================
-# ADVANCED BATCH FRAUD DETECTION
+# BATCH FRAUD DETECTION
 # ============================================================
 
 st.header("📁 Advanced Batch Fraud Detection")
 
 st.write(
-    "Upload a CSV file containing transactions. "
-    "FinGuard AI will analyze every transaction "
-    "and assign a fraud probability and risk level."
+    "Upload a CSV containing transactions. "
+    "FinGuard AI will analyze each transaction "
+    "and assign a fraud probability, risk level, "
+    "and recommended decision."
 )
 
 uploaded_file = st.file_uploader(
     "Upload transaction CSV",
     type=["csv"],
-    key="batch_upload"
 )
 
 
 if uploaded_file is not None:
 
     try:
-
         batch_df = pd.read_csv(uploaded_file)
 
         st.success(
-            f"Successfully loaded {len(batch_df):,} transactions."
+            f"Loaded {len(batch_df):,} transactions."
         )
 
-        st.subheader("📋 Uploaded Dataset")
+        st.subheader("📋 Uploaded Data")
 
         st.dataframe(
             batch_df.head(10),
@@ -172,141 +184,179 @@ if uploaded_file is not None:
 
         if st.button(
             "🚨 Analyze All Transactions",
-            type="primary"
+            type="primary",
+            key="batch_button"
         ):
 
-            progress = st.progress(0)
-            status = st.empty()
+            predictions = []
 
-            results = []
+            progress_bar = st.progress(0)
+
+            status_text = st.empty()
 
             total_rows = len(batch_df)
 
-            for i, (_, row) in enumerate(batch_df.iterrows()):
+            for index in range(total_rows):
+
+                row = batch_df.iloc[index]
 
                 try:
 
+                    transaction = row.to_frame().T
+
                     prediction = predict_transaction(
-                        row.to_frame().T
+                        transaction
                     )
 
-                    probability = prediction[
-                        "fraud_probability"
-                    ]
+                    probability = float(
+                        prediction["fraud_probability"]
+                    )
 
-                    risk = prediction[
-                        "risk_level"
-                    ]
+                    risk = prediction["risk_level"]
 
-                    decision = prediction[
-                        "decision"
-                    ]
+                    decision = prediction["decision"]
+
+                    error_message = ""
 
                 except Exception as e:
 
                     probability = 0.0
                     risk = "ERROR"
-                    decision = str(e)
+                    decision = "UNABLE TO ANALYZE"
+                    error_message = str(e)
 
-                results.append({
-                    "Fraud Probability": probability,
-                    "Risk Level": risk,
-                    "Decision": decision
-                })
-
-                progress.progress(
-                    (i + 1) / total_rows
-                    if total_rows > 0
-                    else 1.0
+                predictions.append(
+                    {
+                        "Fraud Probability": probability,
+                        "Risk Level": risk,
+                        "Decision": decision,
+                        "Error": error_message,
+                    }
                 )
 
-                status.text(
+                progress_bar.progress(
+                    (index + 1) / total_rows
+                )
+
+                status_text.write(
                     f"Analyzing transaction "
-                    f"{i + 1:,} of {total_rows:,}"
+                    f"{index + 1:,} / {total_rows:,}"
                 )
 
-            result_df = pd.DataFrame(results)
+            progress_bar.empty()
+            status_text.empty()
+
+            prediction_df = pd.DataFrame(
+                predictions
+            )
 
             analyzed_df = batch_df.copy()
 
-            analyzed_df["Fraud Probability"] = (
-                result_df["Fraud Probability"]
-            )
+            analyzed_df[
+                "Fraud Probability"
+            ] = prediction_df[
+                "Fraud Probability"
+            ]
 
-            analyzed_df["Risk Level"] = (
-                result_df["Risk Level"]
-            )
+            analyzed_df[
+                "Risk Level"
+            ] = prediction_df[
+                "Risk Level"
+            ]
 
-            analyzed_df["Decision"] = (
-                result_df["Decision"]
-            )
+            analyzed_df[
+                "Decision"
+            ] = prediction_df[
+                "Decision"
+            ]
 
-            status.empty()
-            progress.empty()
+            analyzed_df[
+                "Analysis Error"
+            ] = prediction_df[
+                "Error"
+            ]
+
+            st.success(
+                "✅ Batch analysis completed."
+            )
 
             # ==================================================
             # BATCH SUMMARY
             # ==================================================
 
-            st.success(
-                "✅ Batch analysis completed successfully."
+            st.subheader(
+                "📊 Batch Analysis Summary"
             )
-
-            st.subheader("📊 Batch Analysis Summary")
 
             analyzed_count = len(analyzed_df)
 
-            high_risk = int(
-                (analyzed_df["Risk Level"] == "HIGH RISK").sum()
+            high_risk_count = int(
+                (
+                    analyzed_df["Risk Level"]
+                    == "HIGH RISK"
+                ).sum()
             )
 
-            medium_risk = int(
-                (analyzed_df["Risk Level"] == "MEDIUM RISK").sum()
+            medium_risk_count = int(
+                (
+                    analyzed_df["Risk Level"]
+                    == "MEDIUM RISK"
+                ).sum()
             )
 
-            low_risk = int(
-                (analyzed_df["Risk Level"] == "LOW RISK").sum()
+            low_risk_count = int(
+                (
+                    analyzed_df["Risk Level"]
+                    == "LOW RISK"
+                ).sum()
             )
 
             error_count = int(
-                (analyzed_df["Risk Level"] == "ERROR").sum()
+                (
+                    analyzed_df["Risk Level"]
+                    == "ERROR"
+                ).sum()
             )
 
-            detected_fraud_rate = (
-                high_risk / analyzed_count * 100
-                if analyzed_count > 0
-                else 0
-            )
+            if analyzed_count > 0:
+                detected_rate = (
+                    high_risk_count
+                    / analyzed_count
+                    * 100
+                )
+            else:
+                detected_rate = 0.0
 
-            b1, b2, b3, b4 = st.columns(4)
+            s1, s2, s3, s4 = st.columns(4)
 
-            with b1:
+            with s1:
                 st.metric(
                     "Analyzed",
                     f"{analyzed_count:,}"
                 )
 
-            with b2:
+            with s2:
                 st.metric(
                     "High Risk",
-                    f"{high_risk:,}"
+                    f"{high_risk_count:,}"
                 )
 
-            with b3:
+            with s3:
                 st.metric(
                     "Medium Risk",
-                    f"{medium_risk:,}"
+                    f"{medium_risk_count:,}"
                 )
 
-            with b4:
+            with s4:
                 st.metric(
-                    "Detected Rate",
-                    f"{detected_fraud_rate:.2f}%"
+                    "High-Risk Rate",
+                    f"{detected_rate:.2f}%"
                 )
 
             if error_count > 0:
+
                 st.warning(
-                    f"{error_count} transaction(s) "
+                    f"⚠️ {error_count:,} transaction(s) "
                     "could not be analyzed."
                 )
 
@@ -314,61 +364,48 @@ if uploaded_file is not None:
             # RISK DISTRIBUTION
             # ==================================================
 
-            st.subheader("📈 Risk Distribution")
+            st.subheader(
+                "📈 Risk Distribution"
+            )
 
-            risk_distribution = pd.DataFrame({
-                "Risk Level": [
-                    "HIGH RISK",
-                    "MEDIUM RISK",
-                    "LOW RISK"
-                ],
-                "Transactions": [
-                    high_risk,
-                    medium_risk,
-                    low_risk
-                ]
-            })
+            risk_df = pd.DataFrame(
+                {
+                    "Risk": [
+                        "HIGH RISK",
+                        "MEDIUM RISK",
+                        "LOW RISK",
+                    ],
+                    "Transactions": [
+                        high_risk_count,
+                        medium_risk_count,
+                        low_risk_count,
+                    ],
+                }
+            )
 
             st.bar_chart(
-                risk_distribution.set_index(
-                    "Risk Level"
-                )
+                risk_df.set_index("Risk")
             )
 
             # ==================================================
             # MOST SUSPICIOUS TRANSACTIONS
             # ==================================================
 
-            st.subheader("🚨 Most Suspicious Transactions")
+            st.subheader(
+                "🚨 Most Suspicious Transactions"
+            )
 
-            suspicious = (
+            suspicious_df = (
                 analyzed_df
                 .sort_values(
-                    "Fraud Probability",
+                    by="Fraud Probability",
                     ascending=False
                 )
                 .head(10)
             )
 
-            display_columns = [
-                column
-                for column in [
-                    "Fraud Probability",
-                    "Risk Level",
-                    "Decision"
-                ]
-                if column in suspicious.columns
-            ]
-
             st.dataframe(
-                suspicious[
-                    display_columns
-                    + [
-                        column
-                        for column in suspicious.columns
-                        if column not in display_columns
-                    ]
-                ],
+                suspicious_df,
                 use_container_width=True
             )
 
@@ -376,18 +413,27 @@ if uploaded_file is not None:
             # DOWNLOAD REPORT
             # ==================================================
 
-            st.subheader("📥 Download Fraud Analysis Report")
+            st.subheader(
+                "📥 Download Analysis Report"
+            )
 
-            csv_data = analyzed_df.to_csv(
+            download_data = analyzed_df.to_csv(
                 index=False
             ).encode("utf-8")
 
             st.download_button(
-                label="⬇️ Download Analyzed CSV",
-                data=csv_data,
+                label="⬇️ Download Fraud Analysis CSV",
+                data=download_data,
                 file_name="finguard_batch_analysis.csv",
                 mime="text/csv",
+                key="download_report",
             )
+
+    except Exception as e:
+
+        st.error(
+            f"❌ Batch processing failed: {e}"
+        )
 
 
 # ============================================================
@@ -397,45 +443,47 @@ if uploaded_file is not None:
 st.header("🔎 Analyze Real Transaction")
 
 st.write(
-    "Select a transaction from the demo dataset "
-    "and analyze it using the trained Random Forest model."
+    "Select a transaction row from the demo dataset "
+    "and run the fraud detection model."
 )
 
 
 if len(df) > 0:
 
-    row_number = st.number_input(
+    selected_index = st.number_input(
         "Transaction Row",
         min_value=0,
         max_value=len(df) - 1,
         value=0,
-        step=1
+        step=1,
     )
 
     selected_row = df.iloc[
-        int(row_number)
+        int(selected_index)
     ]
 
     st.dataframe(
         selected_row.to_frame().T,
-        use_container_width=True
+        use_container_width=True,
     )
 
     if st.button(
         "🚨 Analyze Transaction",
         type="primary",
-        key="single_analysis"
+        key="single_button",
     ):
 
         try:
 
+            transaction = selected_row.to_frame().T
+
             prediction = predict_transaction(
-                selected_row.to_frame().T
+                transaction
             )
 
-            probability = prediction[
-                "fraud_probability"
-            ]
+            probability = float(
+                prediction["fraud_probability"]
+            )
 
             risk_level = prediction[
                 "risk_level"
@@ -445,15 +493,17 @@ if len(df) > 0:
                 "decision"
             ]
 
-            threshold = prediction[
-                "threshold"
-            ]
+            threshold = float(
+                prediction["threshold"]
+            )
 
             # ================================================
             # PREDICTION RESULT
             # ================================================
 
-            st.subheader("🎯 Prediction Result")
+            st.subheader(
+                "🎯 Prediction Result"
+            )
 
             p1, p2, p3 = st.columns(3)
 
@@ -476,73 +526,81 @@ if len(df) > 0:
                 )
 
             # ================================================
-            # DECISION MESSAGE
+            # RISK MESSAGE
             # ================================================
 
             if risk_level == "HIGH RISK":
 
                 st.error(
-                    "🚨 HIGH RISK — Transaction should be blocked "
+                    "🚨 HIGH RISK — "
+                    "Transaction should be blocked "
                     "or manually reviewed."
                 )
 
             elif risk_level == "MEDIUM RISK":
 
                 st.warning(
-                    "⚠️ MEDIUM RISK — Transaction requires review."
+                    "⚠️ MEDIUM RISK — "
+                    "Transaction requires review."
                 )
 
             else:
 
                 st.success(
-                    "✅ LOW RISK — Transaction appears legitimate."
+                    "✅ LOW RISK — "
+                    "Transaction appears legitimate."
                 )
-
-            # ================================================
-            # DECISION
-            # ================================================
 
             st.info(
                 f"Recommended Decision: **{decision}**"
             )
 
             # ================================================
-            # DATASET LABEL
+            # ACTUAL DATASET LABEL
             # ================================================
 
             if "Class" in selected_row.index:
 
-                actual_label = selected_row["Class"]
+                actual_label = selected_row[
+                    "Class"
+                ]
 
                 if actual_label == 1:
+
                     st.error(
                         "Dataset Label: 🚨 Fraud"
                     )
+
                 else:
+
                     st.info(
                         "Dataset Label: ✅ Legitimate"
                     )
 
             # ================================================
-            # FEATURE IMPORTANCE
+            # AI EXPLANATION
             # ================================================
 
-            st.subheader("🔍 AI Explanation")
+            st.subheader(
+                "🔍 AI Explanation"
+            )
 
             try:
 
-                importance_df = get_feature_importance(
-                    selected_row.to_frame().T
+                importance_df = (
+                    get_feature_importance(
+                        transaction
+                    )
                 )
 
                 st.dataframe(
                     importance_df.head(10),
-                    use_container_width=True
+                    use_container_width=True,
                 )
 
                 st.caption(
-                    "Feature importance shows which features "
-                    "are most influential to the trained model."
+                    "The current explanation uses "
+                    "Random Forest feature importance."
                 )
 
             except Exception as e:
@@ -567,4 +625,4 @@ st.divider()
 st.caption(
     "FinGuard AI | Random Forest Fraud Detection | "
     "Credit Card Fraud Detection Dataset"
-    )         
+)
