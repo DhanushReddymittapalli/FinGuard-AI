@@ -164,11 +164,6 @@ if st.button(
                 importance.head(5),
                 use_container_width=True
             )
-                
-            st.dataframe(
-    importance.head(5),
-    use_container_width=True
-            )
 
     if probability >= threshold:
 
