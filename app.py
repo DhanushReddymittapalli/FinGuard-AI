@@ -155,7 +155,7 @@ if st.button(
             "Risk Level",
             risk
         )
-                st.write("### 🔍 Why was this transaction flagged?")
+        st.write("### 🔍 Why was this transaction flagged?")
 
         importance = get_feature_importance(transaction)
 
@@ -164,6 +164,7 @@ if st.button(
                 importance.head(5),
                 use_container_width=True
             )
+                
             st.dataframe(
     importance.head(5),
     use_container_width=True
