@@ -221,7 +221,7 @@ if st.button(
             "The model estimates a low probability "
             "of fraud."
         )
-        # --------------------------
+# --------------------------
 # RECOMMENDED ACTION
 # --------------------------
 
