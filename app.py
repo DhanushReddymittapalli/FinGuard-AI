@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from model.predictor import predict_transaction, threshold
+from model.predictor import predict_transaction, get_feature_importance, threshold
 
 st.set_page_config(
     page_title="FinGuard AI",
