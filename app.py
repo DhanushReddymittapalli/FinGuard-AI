@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import joblib
+from model.predictor import predict_transaction, threshold
 
 st.set_page_config(
     page_title="FinGuard AI",
