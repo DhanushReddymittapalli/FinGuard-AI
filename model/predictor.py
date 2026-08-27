@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import joblib
 import pandas as pd
 
@@ -7,8 +8,8 @@ import pandas as pd
 # PATH CONFIGURATION
 # ============================================================
 
-# predictor.py is inside /model
-# Model files are in the repository root
+# predictor.py is inside: model/
+# Model files are in the repository root.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 MODEL_PATH = BASE_DIR / "finguard_model.pkl"
@@ -31,13 +32,13 @@ model = joblib.load(MODEL_PATH)
 # LOAD THRESHOLD
 # ============================================================
 
+threshold = 0.30
+
 if THRESHOLD_PATH.exists():
     try:
         threshold = float(joblib.load(THRESHOLD_PATH))
     except Exception:
         threshold = 0.30
-else:
-    threshold = 0.30
 
 
 # ============================================================
@@ -52,7 +53,6 @@ def get_expected_features():
     if hasattr(model, "feature_names_in_"):
         return list(model.feature_names_in_)
 
-    # Fallback for models saved without feature names
     return None
 
 
@@ -62,8 +62,10 @@ def get_expected_features():
 
 def prepare_transaction(transaction):
     """
-    Prepare a transaction DataFrame so that it matches
-    the features used during model training.
+    Prepare a transaction DataFrame for prediction.
+
+    Removes the target column if present and keeps the
+    same feature order used during model training.
     """
 
     if not isinstance(transaction, pd.DataFrame):
@@ -77,6 +79,7 @@ def prepare_transaction(transaction):
 
     expected_features = get_expected_features()
 
+    # If the model contains feature names, use them.
     if expected_features is not None:
 
         missing_features = [
@@ -103,7 +106,7 @@ def prepare_transaction(transaction):
 
 def predict_transaction(transaction):
     """
-    Predict fraud probability and risk level.
+    Predict fraud probability, risk level and decision.
 
     Returns:
         fraud_probability
@@ -114,27 +117,47 @@ def predict_transaction(transaction):
 
     transaction = prepare_transaction(transaction)
 
-    # Get fraud probability
+    # --------------------------------------------------------
+    # FRAUD PROBABILITY
+    # --------------------------------------------------------
+
     if hasattr(model, "predict_proba"):
 
         probabilities = model.predict_proba(transaction)
 
-        # For binary classification, column 1 is normally
-        # the positive/fraud class.
+        # Binary classification
         if probabilities.shape[1] >= 2:
-            probability = float(probabilities[0][1])
+
+            # Normally class 1 = fraud.
+            classes = list(getattr(model, "classes_", [0, 1]))
+
+            if 1 in classes:
+                fraud_index = classes.index(1)
+            else:
+                # Fall back to the second probability
+                fraud_index = 1
+
+            probability = float(
+                probabilities[0][fraud_index]
+            )
+
         else:
-            probability = float(probabilities[0][0])
+            probability = float(
+                probabilities[0][0]
+            )
 
     else:
 
-        prediction = int(model.predict(transaction)[0])
+        prediction = int(
+            model.predict(transaction)[0]
+        )
 
         probability = 1.0 if prediction == 1 else 0.0
 
-    # ========================================================
+
+    # --------------------------------------------------------
     # RISK CLASSIFICATION
-    # ========================================================
+    # --------------------------------------------------------
 
     if probability >= threshold:
 
@@ -151,11 +174,16 @@ def predict_transaction(transaction):
         risk_level = "LOW RISK"
         decision = "APPROVE TRANSACTION"
 
+
+    # --------------------------------------------------------
+    # ALWAYS RETURN ALL REQUIRED VALUES
+    # --------------------------------------------------------
+
     return {
         "fraud_probability": probability,
         "risk_level": risk_level,
         "threshold": threshold,
-        "decision": decision
+        "decision": decision,
     }
 
 
@@ -167,40 +195,73 @@ def get_feature_importance(transaction=None):
     """
     Return Random Forest feature importance.
 
-    The transaction parameter is accepted for compatibility
-    with the Streamlit application.
+    Returns a DataFrame containing:
+        Feature
+        Importance
     """
 
     if not hasattr(model, "feature_importances_"):
         raise ValueError(
-            "The loaded model does not provide feature_importances_."
+            "The loaded model does not provide "
+            "feature_importances_."
         )
-
-    expected_features = get_expected_features()
-
-    if expected_features is None:
-
-        if transaction is not None:
-
-            if not isinstance(transaction, pd.DataFrame):
-                transaction = pd.DataFrame(transaction)
-
-            features = list(transaction.columns)
-
-        else:
-
-            features = [
-                f"Feature {i + 1}"
-                for i in range(len(model.feature_importances_))
-            ]
-
-    else:
-
-        features = expected_features
 
     importances = list(model.feature_importances_)
 
+    expected_features = get_expected_features()
+
+    # --------------------------------------------------------
+    # USE MODEL FEATURE NAMES WHEN AVAILABLE
+    # --------------------------------------------------------
+
+    if expected_features is not None:
+
+        features = expected_features
+
+    # --------------------------------------------------------
+    # OTHERWISE USE TRANSACTION COLUMN NAMES
+    # --------------------------------------------------------
+
+    elif transaction is not None:
+
+        if not isinstance(transaction, pd.DataFrame):
+            transaction = pd.DataFrame(transaction)
+
+        transaction = transaction.copy()
+
+        if "Class" in transaction.columns:
+            transaction = transaction.drop(columns=["Class"])
+
+        features = list(transaction.columns)
+
+    # --------------------------------------------------------
+    # LAST FALLBACK
+    # --------------------------------------------------------
+
+    else:
+
+        features = [
+            f"Feature {i + 1}"
+            for i in range(len(importances))
+        ]
+
+
+    # --------------------------------------------------------
+    # GUARANTEE SAME LENGTH
+    # --------------------------------------------------------
+
     if len(features) != len(importances):
-        raise ValueError(
-            "Number of model features does not match "
-            "number of feature importance values."
+
+        features = [
+            f"Feature {i + 1}"
+            for i in range(len(importances))
+        ]
+
+
+    # --------------------------------------------------------
+    # CREATE RESULT
+    # --------------------------------------------------------
+
+    importance_df = pd.DataFrame(
+        {
+            "Feature
