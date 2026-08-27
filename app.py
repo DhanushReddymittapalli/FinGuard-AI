@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
-from model import predictor
+from model.predictor import predict_transaction, get_feature_importance
+
 
 
 st.set_page_config(
