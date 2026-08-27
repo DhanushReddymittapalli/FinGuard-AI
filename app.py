@@ -409,4 +409,59 @@ if len(df) > 0:
                     )
 
                     if (
-                        "feature" in importance
+                        "feature" in importance.columns
+                        and "SHAP Impact" in importance.columns
+                    ):
+
+                        chart_data = importance[
+                            ["feature", "SHAP Impact"]
+                        ].copy()
+
+                        chart_data = chart_data.set_index(
+                            "feature"
+                        )
+
+                        st.bar_chart(
+                            chart_data
+                        )
+
+                else:
+
+                    st.write(importance)
+
+            except Exception as explanation_error:
+
+                st.warning(
+                    "⚠️ Prediction succeeded, but "
+                    "AI explanation could not be generated."
+                )
+
+                st.caption(
+                    str(explanation_error)
+                )
+
+        except Exception as e:
+
+            st.error(
+                "❌ Transaction analysis failed."
+            )
+
+            st.exception(e)
+
+else:
+
+    st.warning(
+        "No transactions are available."
+    )
+
+
+# ============================================================
+# FOOTER
+# ============================================================
+
+st.divider()
+
+st.caption(
+    "FinGuard AI | Random Forest Fraud Detection | "
+    "Credit Card Fraud Detection Dataset"
+)
