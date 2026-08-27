@@ -136,6 +136,150 @@ with m4:
         "Threshold",
         "0.30"
     )
+    # --------------------------------------------------
+# BATCH FRAUD DETECTION
+# --------------------------------------------------
+
+st.write("### 📂 Batch Fraud Detection")
+
+st.write(
+    "Upload a CSV file containing transactions and "
+    "FinGuard AI will analyze them automatically."
+)
+
+uploaded_file = st.file_uploader(
+    "Upload transaction CSV",
+    type=["csv"]
+)
+
+if uploaded_file is not None:
+
+    batch_df = pd.read_csv(uploaded_file)
+
+    st.write("#### 📋 Uploaded Transactions")
+
+    st.dataframe(
+        batch_df.head(10),
+        use_container_width=True
+    )
+
+    if "Class" in batch_df.columns:
+
+        prediction_data = batch_df.drop(
+            columns=["Class"]
+        )
+
+    else:
+
+        prediction_data = batch_df.copy()
+
+    if st.button(
+        "🔍 Analyze Uploaded Transactions",
+        use_container_width=True
+    ):
+
+        try:
+
+            probabilities = (
+                predict_transaction_batch(
+                    prediction_data
+                )
+            )
+
+            results = batch_df.copy()
+
+            results["Fraud Probability"] = probabilities
+
+            results["Risk Level"] = results[
+                "Fraud Probability"
+            ].apply(
+                lambda x:
+                    "HIGH RISK 🚨"
+                    if x >= 0.30
+                    else (
+                        "MEDIUM RISK ⚠️"
+                        if x >= 0.10
+                        else "LOW RISK ✅"
+                    )
+            )
+
+            results["Recommended Action"] = results[
+                "Fraud Probability"
+            ].apply(
+                lambda x:
+                    "BLOCK"
+                    if x >= 0.30
+                    else (
+                        "MANUAL REVIEW"
+                        if x >= 0.10
+                        else "APPROVE"
+                    )
+            )
+
+            st.success(
+                f"✅ Analyzed {len(results):,} transactions."
+            )
+
+            st.dataframe(
+                results,
+                use_container_width=True
+            )
+
+            fraud_count = int(
+                (results["Fraud Probability"] >= 0.30).sum()
+            )
+
+            review_count = int(
+                (
+                    (results["Fraud Probability"] >= 0.10)
+                    &
+                    (results["Fraud Probability"] < 0.30)
+                ).sum()
+            )
+
+            approve_count = int(
+                (results["Fraud Probability"] < 0.10).sum()
+            )
+
+            st.write("#### 📊 Batch Results")
+
+            b1, b2, b3 = st.columns(3)
+
+            with b1:
+                st.metric(
+                    "🚨 Block",
+                    f"{fraud_count:,}"
+                )
+
+            with b2:
+                st.metric(
+                    "⚠️ Manual Review",
+                    f"{review_count:,}"
+                )
+
+            with b3:
+                st.metric(
+                    "✅ Approve",
+                    f"{approve_count:,}"
+                )
+
+            csv_data = results.to_csv(
+                index=False
+            ).encode("utf-8")
+
+            st.download_button(
+                "⬇️ Download Analysis Results",
+                csv_data,
+                "finguard_batch_results.csv",
+                "text/csv",
+                use_container_width=True
+            )
+
+        except Exception as e:
+
+            st.error(
+                f"❌ Batch analysis failed: {e}"
+            )
 
 
 # --------------------------------------------------
