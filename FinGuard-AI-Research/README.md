@@ -10,7 +10,7 @@ The goal is to evaluate different machine learning approaches and improve the in
 
 ## Research Objective
 
-The main objective of this research is to:
+The main objectives of this research are to:
 
 - Compare multiple machine learning models for credit card fraud detection.
 - Evaluate model performance using appropriate classification metrics.
@@ -85,7 +85,7 @@ The XGBoost model achieved the following results:
 | Recall | **0.8571** |
 | F1-score | **0.7467** |
 
-The results demonstrate that XGBoost provides strong discrimination between fraudulent and legitimate transactions while maintaining high fraud detection recall.
+The results demonstrate strong discrimination between fraudulent and legitimate transactions while maintaining high fraud detection recall.
 
 ---
 
@@ -93,11 +93,11 @@ The results demonstrate that XGBoost provides strong discrimination between frau
 
 Different classification thresholds were evaluated to investigate the trade-off between precision and recall.
 
-Changing the threshold affects the number of transactions classified as fraudulent.
+Changing the classification threshold affects the number of transactions predicted as fraudulent.
 
-The analysis helps identify how a fraud detection system can balance:
+This analysis helps study how a fraud detection system can balance:
 
-- Detecting more fraudulent transactions.
+- Detecting fraudulent transactions.
 - Reducing false positives.
 - Improving precision.
 - Maintaining acceptable recall.
@@ -115,7 +115,7 @@ Error analysis was performed to study:
 - False positives
 - False negatives
 
-This analysis helps identify the limitations of the fraud detection model and provides insight into the types of predictions that require further investigation.
+This analysis helps identify model limitations and provides insight into incorrect fraud and legitimate transaction predictions.
 
 ---
 
@@ -142,23 +142,23 @@ SHAP provides both global feature importance and individual transaction-level ex
 
 ## Key Research Findings
 
-- XGBoost achieved a strong **ROC-AUC of 0.9816**.
+- XGBoost achieved a **ROC-AUC of 0.9816**.
 - Threshold selection significantly affects the precision-recall trade-off.
 - SHAP identified **V14, V4, V10, V12, and V11** as the most influential features in the analyzed sample.
 - Error analysis provides insight into false-positive and false-negative predictions.
-- SHAP explanations make individual fraud predictions more interpretable.
+- SHAP explanations provide additional interpretability for individual predictions.
 - Combining machine learning with Explainable AI can make fraud detection systems easier to analyze and understand.
 
 ---
 
 ## Research Outputs
 
-The `results/` directory contains:
+The `results/` directory contains the following research outputs:
 
 - `FinGuard_model_comparison_results.csv` — model performance results
 - `FinGuard_model_comparison.png` — model comparison visualization
 - `FinGuard_threshold_analysis.csv` — threshold performance analysis
-- `FinGuard_threshold_tradeoff.png` — precision-recall-F1 threshold visualization
+- `FinGuard_threshold_tradeoff.png` — threshold trade-off visualization
 - `FinGuard_error_analysis.csv` — prediction error analysis
 - `FinGuard_shap_feature_importance.csv` — SHAP feature importance values
 - `FinGuard_shap_feature_importance.png` — SHAP feature importance visualization
@@ -166,13 +166,23 @@ The `results/` directory contains:
 
 ---
 
+## Research Notebook
+
+The complete experimental workflow is available in:
+
+**`FinGuard_XAI_Research.ipynb`**
+
+The notebook contains the data preparation, model training, evaluation, threshold analysis, error analysis, and SHAP explainability experiments.
+
+---
+
 ## Project Structure
 
 ```text
 FinGuard-AI-Research/
-├── data/
+├── FinGuard_XAI_Research.ipynb
 ├── notebooks/
-├── models/
+│   └── .gitkeep
 ├── results/
 │   ├── FinGuard_model_comparison_results.csv
 │   ├── FinGuard_model_comparison.png
