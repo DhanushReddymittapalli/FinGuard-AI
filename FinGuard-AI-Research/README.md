@@ -85,4 +85,101 @@ The XGBoost model achieved the following results:
 | Recall | **0.8571** |
 | F1-score | **0.7467** |
 
-The results demonstrate that XGBoost provides strong discrimination between fraudulent and legitimate transactions while maintaining
+The results demonstrate that XGBoost provides strong discrimination between fraudulent and legitimate transactions while maintaining high fraud detection recall.
+
+---
+
+## Threshold Analysis
+
+Different classification thresholds were evaluated to investigate the trade-off between precision and recall.
+
+Changing the threshold affects the number of transactions classified as fraudulent.
+
+The analysis helps identify how a fraud detection system can balance:
+
+- Detecting more fraudulent transactions.
+- Reducing false positives.
+- Improving precision.
+- Maintaining acceptable recall.
+
+The complete threshold analysis and visualization are available in the `results/` directory.
+
+---
+
+## Error Analysis
+
+Error analysis was performed to study:
+
+- True positives
+- True negatives
+- False positives
+- False negatives
+
+This analysis helps identify the limitations of the fraud detection model and provides insight into the types of predictions that require further investigation.
+
+---
+
+## Explainable AI (SHAP)
+
+SHAP (SHapley Additive exPlanations) was applied to the XGBoost model to improve prediction interpretability.
+
+SHAP analysis was performed on:
+
+- **1,000 test transactions**
+- **30 features**
+
+The most influential features based on mean absolute SHAP value were:
+
+1. **V14**
+2. **V4**
+3. **V10**
+4. **V12**
+5. **V11**
+
+SHAP provides both global feature importance and individual transaction-level explanations.
+
+---
+
+## Key Research Findings
+
+- XGBoost achieved a strong **ROC-AUC of 0.9816**.
+- Threshold selection significantly affects the precision-recall trade-off.
+- SHAP identified **V14, V4, V10, V12, and V11** as the most influential features in the analyzed sample.
+- Error analysis provides insight into false-positive and false-negative predictions.
+- SHAP explanations make individual fraud predictions more interpretable.
+- Combining machine learning with Explainable AI can make fraud detection systems easier to analyze and understand.
+
+---
+
+## Research Outputs
+
+The `results/` directory contains:
+
+- `FinGuard_model_comparison_results.csv` — model performance results
+- `FinGuard_model_comparison.png` — model comparison visualization
+- `FinGuard_threshold_analysis.csv` — threshold performance analysis
+- `FinGuard_threshold_tradeoff.png` — precision-recall-F1 threshold visualization
+- `FinGuard_error_analysis.csv` — prediction error analysis
+- `FinGuard_shap_feature_importance.csv` — SHAP feature importance values
+- `FinGuard_shap_feature_importance.png` — SHAP feature importance visualization
+- `FinGuard_individual_explanation.png` — individual transaction SHAP explanation
+
+---
+
+## Project Structure
+
+```text
+FinGuard-AI-Research/
+├── data/
+├── notebooks/
+├── models/
+├── results/
+│   ├── FinGuard_model_comparison_results.csv
+│   ├── FinGuard_model_comparison.png
+│   ├── FinGuard_threshold_analysis.csv
+│   ├── FinGuard_threshold_tradeoff.png
+│   ├── FinGuard_error_analysis.csv
+│   ├── FinGuard_shap_feature_importance.csv
+│   ├── FinGuard_shap_feature_importance.png
+│   └── FinGuard_individual_explanation.png
+└── README.md
