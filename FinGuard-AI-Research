@@ -1,7 +1,54 @@
-FinGuard-AI-Research/
-│
-├── data/
-├── notebooks/
-├── results/
-├── models/
-└── README.md
+# FinGuard AI Research
+
+## Explainable Machine Learning for Credit Card Fraud Detection
+
+### Abstract
+
+Credit card fraud detection is challenging because fraudulent transactions represent a very small proportion of total transactions. This research investigates machine learning approaches for detecting fraudulent transactions under severe class imbalance.
+
+Logistic Regression, Random Forest, and XGBoost are compared using ROC-AUC, PR-AUC, Precision, Recall, and F1-score. Threshold optimization and SHAP-based Explainable AI are also investigated to understand model behavior and improve the transparency of fraud predictions.
+
+### Research Question
+
+How can machine learning and Explainable AI improve credit card fraud detection while balancing fraud detection and false-alarm rates?
+
+## Objectives
+
+- Compare Logistic Regression, Random Forest, and XGBoost.
+- Evaluate models using multiple fraud-detection metrics.
+- Study the effect of classification thresholds.
+- Use SHAP to explain model predictions.
+- Analyze false positives and missed fraud cases.
+- Identify a practical model for fraud detection.
+
+## Dataset
+
+The research uses the ULB Credit Card Fraud Detection dataset.
+
+- Transactions: 284,807
+- Fraudulent transactions: 492
+- Legitimate transactions: 284,315
+- Severe class imbalance
+
+Because of the imbalance, ROC-AUC and PR-AUC are emphasized instead of accuracy alone.
+
+## Methodology
+
+```text
+Credit Card Dataset
+        ↓
+Data Preprocessing
+        ↓
+Stratified Train-Test Split
+        ↓
+Logistic Regression
+Random Forest
+XGBoost
+        ↓
+Model Evaluation
+        ↓
+Threshold Analysis
+        ↓
+SHAP Explainability
+        ↓
+Error Analysis
